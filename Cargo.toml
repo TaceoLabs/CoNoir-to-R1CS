@@ -1,0 +1,35 @@
+[package]
+name = "co-noir-to-r1cs"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.87"
+authors = ["TACEO GmbH <hello@taceo.io>"]
+homepage = "https://www.taceo.io"
+repository = "https://github.com/TaceoLabs/CoNoir-to-R1CS"
+license = "MIT OR Apache-2.0"
+publish = false
+readme = "./README.md"
+
+[dependencies]
+acir = { version = "1.0.0-beta.6", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.6", package = "acir" }
+ark-bn254 = "^0.5.0"
+ark-ec = { version = "^0.5.0", default-features = false }
+ark-ff = "^0.5.0"
+ark-groth16 = "0.5.0"
+ark-poly = "^0.5.0"
+ark-relations = "^0.5.0"
+co-acvm = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+co-circom = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+co-groth16 = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+co-noir = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+co-ultrahonk = { version = "0.5.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+eyre = "0.6.12"
+mpc-core = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+mpc-net = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs", features = [
+    "local",
+] }
+noirc-artifacts = { version = "1.0.0-beta.6", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.6", package = "noirc_artifacts" }
+num-bigint = { version = "0.4.6" }
+rand = "0.8.5"
+serde = { version = "1.0.193", features = ["derive", "rc"] }
+tracing = "0.1.40"
