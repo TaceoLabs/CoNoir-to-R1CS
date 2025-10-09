@@ -1,17 +1,20 @@
-use acir::native_types::WitnessMap;
-use co_acvm::solver::Rep3CoSolver;
+use acir::native_types::WitnessStack;
+use co_acvm::{Rep3AcvmType, solver::Rep3CoSolver};
+use co_builder::flavours::ultra_flavour::UltraFlavour;
 use co_noir::{
-    AcirFormat, Bn254, CrsParser, Keccak256, Rep3AcvmType, Rep3CoUltraHonk, UltraHonk,
-    VerifyingKey, VerifyingKeyBarretenberg,
+    AcirFormat, Bn254, CrsParser, HonkProof, Keccak256, Rep3CoUltraHonk, UltraHonk, VerifyingKey,
+    VerifyingKeyBarretenberg,
 };
-use co_ultrahonk::prelude::{HonkProof, ProverCrs, UltraFlavour, Utils, ZeroKnowledge};
+use co_noir_types::Rep3Type;
+use co_ultrahonk::prelude::{ProverCrs, ZeroKnowledge};
 use eyre::Context;
 use mpc_net::Network;
 use noirc_artifacts::program::ProgramArtifact;
-use std::{path::Path, sync::Arc, time::Instant};
+use std::{fs::File, path::Path, sync::Arc, time::Instant};
 
 pub(crate) type F = ark_bn254::Fr;
-pub(crate) type Curve = Bn254;
+type Curve = ark_bn254::G1Projective;
+pub(crate) type Pairing = Bn254;
 type CrsG2 = ark_bn254::G2Affine;
 type Transcript = Keccak256;
 
@@ -20,20 +23,21 @@ const RECURSIVE: bool = false;
 const HONK_RECURSION: bool = true;
 
 pub fn get_program_artifact(circuit_path: impl AsRef<Path>) -> eyre::Result<ProgramArtifact> {
-    let artifact = Utils::get_program_artifact_from_file(&circuit_path)
-        .context("while parsing program artifact")?;
+    let file = File::open(circuit_path).context("while opening program artifact file")?;
+    let artifact =
+        co_noir::program_artifact_from_reader(file).context("while parsing program artifact")?;
     Ok(artifact)
 }
 
 pub fn get_constraint_system_from_artifact(program_artifact: &ProgramArtifact) -> AcirFormat<F> {
-    Utils::get_constraint_system_from_artifact(program_artifact, HONK_RECURSION)
+    co_noir::get_constraint_system_from_artifact(program_artifact, HONK_RECURSION)
 }
 
 pub fn get_circuit_size(constraint_system: &AcirFormat<F>) -> eyre::Result<usize> {
     co_noir::compute_circuit_size::<Curve>(constraint_system, RECURSIVE)
 }
 
-pub fn get_prver_crs(
+pub fn get_prover_crs(
     crs_path: impl AsRef<Path>,
     circuit_size: usize,
 ) -> eyre::Result<Arc<ProverCrs<Curve>>> {
@@ -41,7 +45,7 @@ pub fn get_prver_crs(
 }
 
 pub fn get_verifier_crs(crs_path: impl AsRef<Path>) -> eyre::Result<CrsG2> {
-    CrsParser::<Curve>::get_crs_g2(crs_path)
+    CrsParser::<Curve>::get_crs_g2::<Pairing>(crs_path)
 }
 
 pub fn generate_vk_barretenberg(
@@ -54,16 +58,8 @@ pub fn generate_vk_barretenberg(
 pub fn get_vk(
     vk: VerifyingKeyBarretenberg<Curve, UltraFlavour>,
     verifier_crs: CrsG2,
-) -> VerifyingKey<Curve, UltraFlavour> {
+) -> VerifyingKey<Pairing, UltraFlavour> {
     VerifyingKey::from_barrettenberg_and_crs(vk, verifier_crs)
-}
-
-pub(crate) fn vec_to_witness_map(inputs: Vec<Rep3AcvmType<F>>) -> WitnessMap<Rep3AcvmType<F>> {
-    let mut result = WitnessMap::default();
-    for (i, v) in inputs.into_iter().enumerate() {
-        result.insert((i as u32).into(), v);
-    }
-    result
 }
 
 pub fn conoir_witness_extension<N: Network>(
@@ -71,9 +67,9 @@ pub fn conoir_witness_extension<N: Network>(
     compiled_program: ProgramArtifact,
     net0: &N,
     net1: &N,
-) -> eyre::Result<Vec<Rep3AcvmType<ark_bn254::Fr>>> {
+) -> eyre::Result<WitnessStack<Rep3AcvmType<F>>> {
     tracing::info!("Starting CoNoir Witness extension...");
-    let input_share = vec_to_witness_map(inputs);
+    let input_share = super::vec_to_witness_map(inputs);
     // init MPC protocol
     let rep3_vm = Rep3CoSolver::new_with_witness(net0, net1, compiled_program, input_share)
         .context("while creating VM")?;
@@ -85,8 +81,7 @@ pub fn conoir_witness_extension<N: Network>(
         .context("while running witness generation")?;
     let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
     tracing::info!("Extending witness took {duration_ms} ms");
-
-    Ok(co_noir::witness_stack_to_vec_rep3(result_witness_share))
+    Ok(result_witness_share)
 }
 
 pub fn r1cs_witness_extension_with_helper<N: Network>(
@@ -95,9 +90,9 @@ pub fn r1cs_witness_extension_with_helper<N: Network>(
     compiled_program: ProgramArtifact,
     net0: &N,
     net1: &N,
-) -> eyre::Result<Vec<Rep3AcvmType<ark_bn254::Fr>>> {
+) -> eyre::Result<WitnessStack<Rep3AcvmType<F>>> {
     tracing::info!("Starting R1CS Witness extension...");
-    let input_share = vec_to_witness_map(inputs);
+    let input_share = super::vec_to_witness_map(inputs);
     // init MPC protocol
     let rep3_vm = Rep3CoSolver::new_with_witness(net0, net1, compiled_program, input_share)
         .context("while creating VM")?;
@@ -109,13 +104,12 @@ pub fn r1cs_witness_extension_with_helper<N: Network>(
         .context("while running witness generation")?;
     let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
     tracing::info!("Extending witness took {duration_ms} ms");
-
-    Ok(co_noir::witness_stack_to_vec_rep3(result_witness_share))
+    Ok(result_witness_share)
 }
 
 pub fn prove<N: Network>(
     constraint_system: &AcirFormat<F>,
-    witness: Vec<Rep3AcvmType<F>>,
+    witness: Vec<Rep3Type<F>>,
     prover_crs: &ProverCrs<Curve>,
     net0: &N,
     net1: &N,
@@ -139,7 +133,7 @@ pub fn prove<N: Network>(
 pub fn verify(
     proof: HonkProof<F>,
     public_inputs: &[F],
-    verifying_key: &VerifyingKey<Curve, UltraFlavour>,
+    verifying_key: &VerifyingKey<Pairing, UltraFlavour>,
 ) -> eyre::Result<bool> {
     UltraHonk::<_, Transcript, UltraFlavour>::verify(proof, public_inputs, verifying_key, ZK)
         .context("while verifying proof")

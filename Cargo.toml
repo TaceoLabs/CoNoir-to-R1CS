@@ -18,15 +18,17 @@ ark-ff = "^0.5.0"
 ark-groth16 = "0.5.0"
 ark-poly = "^0.5.0"
 ark-relations = "^0.5.0"
-co-acvm = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
-co-circom = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
-co-groth16 = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
-co-noir = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
-co-ultrahonk = { version = "0.5.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
+co-acvm = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-builder = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-circom = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-groth16 = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-noir = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-noir-types = { version = "0.1.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+co-ultrahonk = { version = "0.5.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
 eyre = "0.6.12"
 itertools = "0.14.0"
-mpc-core = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs" }
-mpc-net = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", branch = "rw/r1cs", features = [
+mpc-core = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974" }
+mpc-net = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "b8d299289f70c9b0371fa3639ccd133532e74974", features = [
     "local",
 ] }
 noirc-artifacts = { version = "1.0.0-beta.6", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.6", package = "noirc_artifacts" }

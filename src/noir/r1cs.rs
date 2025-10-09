@@ -1,12 +1,14 @@
 use crate::{
-    noir::ultrahonk::{self, Curve, F},
+    noir::ultrahonk::{self, F, Pairing},
     r1cs::noir_proof_schema::{self, NoirProofScheme},
 };
+use acir::native_types::WitnessMap;
 use ark_groth16::{Proof, ProvingKey, VerifyingKey};
 use ark_relations::r1cs::ConstraintMatrices;
 use co_acvm::{Rep3AcvmSolver, Rep3AcvmType};
 use co_circom::Rep3SharedWitness;
 use co_groth16::{LibSnarkReduction, Rep3CoGroth16};
+use co_noir_types::Rep3Type;
 use eyre::Context;
 use mpc_core::protocols::rep3::{self, Rep3State, conversion::A2BType, id::PartyID};
 use mpc_net::Network;
@@ -15,14 +17,12 @@ use rand::{CryptoRng, Rng};
 use std::time::Instant;
 
 fn translate_witness_to_r1cs<N: Network>(
-    witness: Vec<Rep3AcvmType<F>>,
+    witness_map: WitnessMap<Rep3AcvmType<F>>,
     proof_schema: &NoirProofScheme<F>,
     net0: &N,
     net1: &N,
     rep3_state: &mut Rep3State,
-) -> eyre::Result<Vec<Rep3AcvmType<F>>> {
-    let witness_map = ultrahonk::vec_to_witness_map(witness);
-
+) -> eyre::Result<Vec<Rep3Type<F>>> {
     let mut driver = Rep3AcvmSolver::new(net0, net1, A2BType::default())?;
 
     let partial_witness = proof_schema.r1cs.solve_witness_vec_rep3(
@@ -44,21 +44,24 @@ pub fn trace_to_r1cs_witness<N: Network>(
     net0: &N,
     net1: &N,
     rep3_state: &mut Rep3State,
-) -> eyre::Result<Vec<Rep3AcvmType<F>>> {
-    let witness = ultrahonk::r1cs_witness_extension_with_helper(
+) -> eyre::Result<Vec<Rep3Type<F>>> {
+    let mut witness_stack = ultrahonk::r1cs_witness_extension_with_helper(
         inputs,
         traces,
         proof_schema.program.to_owned(),
         net0,
         net1,
     )?;
-
-    translate_witness_to_r1cs(witness, proof_schema, net0, net1, rep3_state)
+    let witness_map = witness_stack
+        .pop()
+        .expect("Witness should be present")
+        .witness;
+    translate_witness_to_r1cs(witness_map, proof_schema, net0, net1, rep3_state)
 }
 
 pub fn r1cs_witness_to_cogroth16(
     proof_schema: &NoirProofScheme<F>,
-    witness: Vec<Rep3AcvmType<F>>,
+    witness: Vec<Rep3Type<F>>,
     id: PartyID,
 ) -> Rep3SharedWitness<F> {
     let public_size = proof_schema.public_input_indices.len() + 1;
@@ -68,7 +71,7 @@ pub fn r1cs_witness_to_cogroth16(
 
     for w in witness.iter().take(public_size) {
         match w {
-            Rep3AcvmType::Public(value) => {
+            Rep3Type::Public(value) => {
                 public_inputs.push(*value);
             }
             _ => {
@@ -79,10 +82,10 @@ pub fn r1cs_witness_to_cogroth16(
 
     for w in witness.into_iter().skip(public_size) {
         match w {
-            Rep3AcvmType::Public(value) => {
+            Rep3Type::Public(value) => {
                 shared_inputs.push(rep3::arithmetic::promote_to_trivial_share(id, value));
             }
-            Rep3AcvmType::Shared(value) => {
+            Rep3Type::Shared(value) => {
                 shared_inputs.push(value);
             }
         }
@@ -108,7 +111,11 @@ pub fn r1cs_witness_to_cogroth16(
 pub fn setup_r1cs<R: Rng + CryptoRng>(
     compiled_program: ProgramArtifact,
     rng: &mut R,
-) -> eyre::Result<(NoirProofScheme<F>, ProvingKey<Curve>, ConstraintMatrices<F>)> {
+) -> eyre::Result<(
+    NoirProofScheme<F>,
+    ProvingKey<Pairing>,
+    ConstraintMatrices<F>,
+)> {
     let mut proof_schema = NoirProofScheme::<F>::from_program(compiled_program)
         .context("while creating Noir proof schema")?;
     proof_schema.reorder_for_public_inputs();
@@ -125,11 +132,11 @@ pub fn setup_r1cs<R: Rng + CryptoRng>(
 
 pub fn prove<N: Network>(
     constraint_system: &ConstraintMatrices<F>,
-    proving_key: &ProvingKey<Curve>,
+    proving_key: &ProvingKey<Pairing>,
     witness: Rep3SharedWitness<F>,
     net0: &N,
     net1: &N,
-) -> eyre::Result<(Proof<Curve>, Vec<F>)> {
+) -> eyre::Result<(Proof<Pairing>, Vec<F>)> {
     let public_input = witness.public_inputs[1..].to_vec(); // Skip the constant 1
 
     let start = Instant::now();
@@ -148,12 +155,12 @@ pub fn prove<N: Network>(
 }
 
 pub fn verify(
-    vk: &VerifyingKey<Curve>,
-    proof: &Proof<Curve>,
+    vk: &VerifyingKey<Pairing>,
+    proof: &Proof<Pairing>,
     public_inputs: &[F],
 ) -> eyre::Result<bool> {
     let vk = ark_groth16::prepare_verifying_key(vk);
-    let proof_valid = ark_groth16::Groth16::<Curve>::verify_proof(&vk, proof, public_inputs)
+    let proof_valid = ark_groth16::Groth16::<Pairing>::verify_proof(&vk, proof, public_inputs)
         .map_err(eyre::Report::from)?;
     Ok(proof_valid)
 }

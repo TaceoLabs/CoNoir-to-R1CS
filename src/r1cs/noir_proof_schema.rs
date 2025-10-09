@@ -2,6 +2,7 @@ use {
     crate::r1cs::{noir_to_r1cs::noir_to_r1cs, r1cs::R1CS, r1cs_solver::WitnessBuilder},
     ark_ff::PrimeField,
     co_acvm::Rep3AcvmType,
+    co_noir_types::Rep3Type,
     eyre::ensure,
     mpc_core::protocols::rep3::{self, Rep3State},
     noirc_artifacts::program::ProgramArtifact,
@@ -118,15 +119,19 @@ pub fn fill_witness<F: PrimeField>(witness: Vec<Option<F>>) -> eyre::Result<Vec<
 pub fn fill_witness_rep3<F: PrimeField>(
     witness: Vec<Option<Rep3AcvmType<F>>>,
     rep3_state: &mut Rep3State,
-) -> eyre::Result<Vec<Rep3AcvmType<F>>> {
+) -> eyre::Result<Vec<Rep3Type<F>>> {
     let mut count = 0;
     let witness = witness
         .iter()
-        .map(|f| {
-            f.to_owned().unwrap_or_else(|| {
+        .map(|f| match f {
+            Some(f) => match f {
+                Rep3AcvmType::Public(v) => Rep3Type::Public(*v),
+                Rep3AcvmType::Shared(v) => Rep3Type::Shared(*v),
+            },
+            None => {
                 count += 1;
                 rep3::arithmetic::rand(rep3_state).into()
-            })
+            }
         })
         .collect::<Vec<_>>();
     info!("Filled witness with {count} random values");
