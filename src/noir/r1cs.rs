@@ -10,11 +10,38 @@ use co_circom::Rep3SharedWitness;
 use co_groth16::{LibSnarkReduction, Rep3CoGroth16};
 use co_noir_types::Rep3Type;
 use eyre::Context;
-use mpc_core::protocols::rep3::{self, Rep3State, conversion::A2BType, id::PartyID};
+use mpc_core::protocols::rep3::{
+    self, Rep3PrimeFieldShare, Rep3State, conversion::A2BType, id::PartyID,
+};
 use mpc_net::Network;
 use noirc_artifacts::program::ProgramArtifact;
 use rand::{CryptoRng, Rng};
 use std::time::Instant;
+
+fn translate_witness_to_r1cs_with_bitdecomp_witness<N: Network>(
+    witness_map: WitnessMap<Rep3AcvmType<F>>,
+    bitdecomps: Vec<Rep3PrimeFieldShare<F>>, // Custom witness for bit decompositions
+    proof_schema: &NoirProofScheme<F>,
+    net0: &N,
+    net1: &N,
+    rep3_state: &mut Rep3State,
+) -> eyre::Result<Vec<Rep3Type<F>>> {
+    let mut driver = Rep3AcvmSolver::new(net0, net1, A2BType::default())?;
+
+    let partial_witness = proof_schema
+        .r1cs
+        .solve_witness_vec_rep3_with_bitdecomp_witness(
+            &proof_schema.witness_builders,
+            &witness_map,
+            bitdecomps,
+            &mut driver,
+        )?;
+    let mut r1cs = noir_proof_schema::fill_witness_rep3(partial_witness, rep3_state)
+        .context("while filling witness")?;
+
+    proof_schema.reorder_witness_for_public_inputs(&mut r1cs);
+    Ok(r1cs)
+}
 
 fn translate_witness_to_r1cs<N: Network>(
     witness_map: WitnessMap<Rep3AcvmType<F>>,
@@ -57,6 +84,36 @@ pub fn trace_to_r1cs_witness<N: Network>(
         .expect("Witness should be present")
         .witness;
     translate_witness_to_r1cs(witness_map, proof_schema, net0, net1, rep3_state)
+}
+
+pub fn trace_to_r1cs_witness_with_bitdecomp_witness<N: Network>(
+    inputs: Vec<Rep3AcvmType<F>>,
+    traces: Vec<Vec<Rep3AcvmType<F>>>,
+    bitdecomps: Vec<Rep3PrimeFieldShare<F>>, // Custom witness for bit decompositions
+    proof_schema: &NoirProofScheme<F>,
+    net0: &N,
+    net1: &N,
+    rep3_state: &mut Rep3State,
+) -> eyre::Result<Vec<Rep3Type<F>>> {
+    let mut witness_stack = ultrahonk::r1cs_witness_extension_with_helper(
+        inputs,
+        traces,
+        proof_schema.program.to_owned(),
+        net0,
+        net1,
+    )?;
+    let witness_map = witness_stack
+        .pop()
+        .expect("Witness should be present")
+        .witness;
+    translate_witness_to_r1cs_with_bitdecomp_witness(
+        witness_map,
+        bitdecomps,
+        proof_schema,
+        net0,
+        net1,
+        rep3_state,
+    )
 }
 
 pub fn r1cs_witness_to_cogroth16(

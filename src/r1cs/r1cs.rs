@@ -1,4 +1,5 @@
 use ark_relations::r1cs::ConstraintMatrices;
+use mpc_core::protocols::rep3::Rep3PrimeFieldShare;
 use {
     crate::r1cs::{
         interner::Interner,
@@ -136,6 +137,30 @@ impl<F: PrimeField> R1CS<F> {
         for witness_builder in witness_builder_vec.iter() {
             witness_builder.solve_rep3(acir_witness_idx_to_value_map, &mut witness, driver)?;
         }
+        Ok(witness)
+    }
+
+    pub fn solve_witness_vec_rep3_with_bitdecomp_witness<N: Network>(
+        &self,
+        witness_builder_vec: &[WitnessBuilder<F>],
+        acir_witness_idx_to_value_map: &WitnessMap<Rep3AcvmType<F>>,
+        bitdecomps: Vec<Rep3PrimeFieldShare<F>>,
+        driver: &mut Rep3AcvmSolver<F, N>,
+    ) -> eyre::Result<Vec<Option<Rep3AcvmType<F>>>> {
+        let mut bitdecomps_iter = bitdecomps.into_iter();
+        let mut witness = vec![None; self.num_witnesses()];
+        for witness_builder in witness_builder_vec.iter() {
+            witness_builder.solve_rep3_with_bitdecomp_witness(
+                acir_witness_idx_to_value_map,
+                &mut witness,
+                &mut bitdecomps_iter,
+                driver,
+            )?;
+        }
+        assert!(
+            bitdecomps_iter.next().is_none(),
+            "Too many bit decomposition witnesses provided"
+        );
         Ok(witness)
     }
 
