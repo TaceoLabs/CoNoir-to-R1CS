@@ -1,5 +1,7 @@
 pub mod proof_schema;
 pub mod proving_key;
+pub mod solidity_verifier;
+pub mod zkey;
 
 use ark_ff::PrimeField;
 use ark_relations::r1cs::SynthesisError;

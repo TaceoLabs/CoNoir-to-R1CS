@@ -2,11 +2,14 @@ use acir::native_types::WitnessStack;
 use co_acvm::{Rep3AcvmType, solver::Rep3CoSolver};
 use co_builder::flavours::ultra_flavour::UltraFlavour;
 use co_noir::{
-    AcirFormat, Bn254, CrsParser, HonkProof, Keccak256, Rep3CoUltraHonk, UltraHonk, VerifyingKey,
+    AcirFormat, Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, UltraHonk, VerifyingKey,
     VerifyingKeyBarretenberg,
 };
+use co_noir_common::{
+    crs::{ProverCrs, parse::CrsParser},
+    types::ZeroKnowledge,
+};
 use co_noir_types::Rep3Type;
-use co_ultrahonk::prelude::{ProverCrs, ZeroKnowledge};
 use eyre::Context;
 use mpc_net::Network;
 use noirc_artifacts::program::ProgramArtifact;
