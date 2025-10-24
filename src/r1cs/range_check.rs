@@ -22,6 +22,21 @@ pub(crate) fn add_range_check_via_bit_decomposition<F: PrimeField>(
                 num_bits != F::MODULUS_BIT_SIZE,
                 "Cannot range check full field at the moment"
             );
+            assert!(num_bits != 0, "Cannot range check to 0 bits at the moment");
+
+            // Special case, we only need to check that the value is either 0 or 1
+            if num_bits == 1 {
+                for val in values_to_lookup {
+                    r1cs.r1cs.add_constraint(
+                        &[(F::one(), val)],
+                        &[(F::one(), val), (F::one().neg(), r1cs.witness_one())],
+                        &[(F::zero(), r1cs.witness_one())],
+                    );
+                }
+                return;
+            }
+
+            // All other cases
             for val in values_to_lookup {
                 // Get the variable indices
                 let next_witness_idx = r1cs.num_witnesses();
