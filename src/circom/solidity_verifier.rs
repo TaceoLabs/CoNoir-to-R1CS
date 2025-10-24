@@ -18,7 +18,6 @@ pub fn export_solidity_verifier<P: Pairing, W: Write>(
     text = text.replace("<%= vk_alpha_1[0]    %>", x.to_string().as_str());
     text = text.replace("<%= vk_alpha_1[1]    %>", y.to_string().as_str());
 
-    // TODO order might be wrong for the g2 stuff
     let (x, y) = vk.beta_g2.xy().unwrap_or_default();
     for x in x.to_base_prime_field_elements().enumerate() {
         text = text.replace(
@@ -33,7 +32,6 @@ pub fn export_solidity_verifier<P: Pairing, W: Write>(
         );
     }
 
-    // TODO order might be wrong for the g2 stuff
     let (x, y) = vk.gamma_g2.xy().unwrap_or_default();
     for x in x.to_base_prime_field_elements().enumerate() {
         text = text.replace(
@@ -63,48 +61,43 @@ pub fn export_solidity_verifier<P: Pairing, W: Write>(
         );
     }
 
-    let mut ic_string = String::new();
+    let mut icx_string = String::new();
+    let mut icy_string = String::new();
+
+    icx_string.push_str(&format!("    uint256[{}] ICx = [\n", num_public + 1));
+    icy_string.push_str(&format!("    uint256[{}] ICy = [\n", num_public + 1));
     for (i, val) in vk.gamma_abc_g1.iter().enumerate() {
         let (x, y) = val.xy().unwrap_or_default();
-        ic_string.push_str(&format!(
-            "    uint256 constant IC{}x = {};\n",
-            i,
-            x.to_string().as_str(),
-        ));
-        ic_string.push_str(&format!(
-            "    uint256 constant IC{}y = {};\n\n",
-            i,
-            y.to_string().as_str(),
-        ));
+        icx_string.push_str(&format!("        {}", x.to_string().as_str()));
+        icy_string.push_str(&format!("        {}", y.to_string().as_str()));
+        if i != vk.gamma_abc_g1.len() - 1 {
+            icx_string.push_str(",\n");
+            icy_string.push_str(",\n");
+        } else {
+            icx_string.push('\n');
+            icy_string.push('\n');
+        }
     }
+    icx_string.push_str("    ];\n");
+    icy_string.push_str("    ];\n");
+    icx_string.push_str(&icy_string);
 
-    text = text.replace("    <% for (let i=0; i<IC.length; i++) { %>\n    uint256 constant IC<%=i%>x = <%=IC[i][0]%>;\n    uint256 constant IC<%=i%>y = <%=IC[i][1]%>;\n    <% } %>", ic_string.as_str());
+    text = text.replace("    <% for (let i=0; i<IC.length; i++) { %>\n    uint256 constant IC<%=i%>x = <%=IC[i][0]%>;\n    uint256 constant IC<%=i%>y = <%=IC[i][1]%>;\n    <% } %>", icx_string.as_str());
 
     text = text.replace("<%=IC.length-1%>", num_public.to_string().as_str());
 
-    let mut linear_comb_string = String::new();
-    for i in 1..=num_public {
-        linear_comb_string.push_str(&format!(
-            "                g1_mulAccC(_pVk, IC{}x, IC{}y, calldataload(add(pubSignals, {})))\n",
-            i,
-            i,
-            (i - 1) * 32
-        ));
-    }
+    let  linear_comb_string = format!("                for {{\n                    let i := 0\n                }} lt(i, {}) {{\n                    i := add(i, 32)\n                }} {{\n                    x_pointer := add(x_pointer, 1)\n                    y_pointer := add(y_pointer, 1)\n                    g1_mulAccC(
+                        _pVk,\n                        sload(x_pointer),\n                        sload(y_pointer),\n                        calldataload(add(pubSignals, i))\n                    )\n                }}", num_public * 32);
 
     text = text.replace(
         "                <% for (let i = 1; i <= nPublic; i++) { %>\n                g1_mulAccC(_pVk, IC<%=i%>x, IC<%=i%>y, calldataload(add(pubSignals, <%=(i-1)*32%>)))\n                <% } %>",
         linear_comb_string.as_str(),
     );
 
-    let mut evaluation_check = String::new();
-
-    for i in 0..num_public {
-        evaluation_check.push_str(&format!(
-            "            checkField(calldataload(add(_pubSignals, {})))\n",
-            i * 32
-        ));
-    }
+    let evaluation_check = format!(
+        "            for {{\n                let i := 0\n            }} lt(i, {}) {{\n                i := add(i, 32)\n            }} {{\n                checkField(calldataload(add(_pubSignals, i)))\n            }}",
+        num_public * 32
+    );
 
     text = text.replace(
         "            <% for (let i=0; i<nPublic; i++) { %>\n            checkField(calldataload(add(_pubSignals, <%=i*32%>)))\n            <% } %>",

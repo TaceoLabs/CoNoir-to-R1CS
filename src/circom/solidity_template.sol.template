@@ -92,8 +92,11 @@ contract Groth16Verifier {
                 let _pPairing := add(pMem, pPairing)
                 let _pVk := add(pMem, pVk)
 
-                mstore(_pVk, IC0x)
-                mstore(add(_pVk, 32), IC0y)
+                let x_pointer := ICx.slot
+                let y_pointer := ICy.slot
+
+                mstore(_pVk, sload(x_pointer))
+                mstore(add(_pVk, 32), sload(y_pointer))
 
                 // Compute the linear combination vk_x
                 <% for (let i = 1; i <= nPublic; i++) { %>
