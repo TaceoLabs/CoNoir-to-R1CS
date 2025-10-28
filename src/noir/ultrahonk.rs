@@ -1,6 +1,5 @@
 use acir::native_types::WitnessStack;
 use co_acvm::{Rep3AcvmType, solver::Rep3CoSolver};
-use co_builder::flavours::ultra_flavour::UltraFlavour;
 use co_noir::{
     AcirFormat, Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, UltraHonk, VerifyingKey,
     VerifyingKeyBarretenberg,
@@ -54,15 +53,12 @@ pub fn get_verifier_crs(crs_path: impl AsRef<Path>) -> eyre::Result<CrsG2> {
 pub fn generate_vk_barretenberg(
     constraint_system: &AcirFormat<F>,
     prover_crs: Arc<ProverCrs<Curve>>,
-) -> eyre::Result<VerifyingKeyBarretenberg<Curve, UltraFlavour>> {
+) -> eyre::Result<VerifyingKeyBarretenberg<Curve>> {
     co_noir::generate_vk_barretenberg::<Curve>(constraint_system, prover_crs, RECURSIVE)
 }
 
-pub fn get_vk(
-    vk: VerifyingKeyBarretenberg<Curve, UltraFlavour>,
-    verifier_crs: CrsG2,
-) -> VerifyingKey<Pairing, UltraFlavour> {
-    VerifyingKey::from_barrettenberg_and_crs(vk, verifier_crs)
+pub fn get_vk(vk: VerifyingKeyBarretenberg<Curve>, verifier_crs: CrsG2) -> VerifyingKey<Pairing> {
+    VerifyingKey::from_barretenberg_and_crs(vk, verifier_crs)
 }
 
 pub fn conoir_witness_extension<N: Network>(
@@ -127,7 +123,7 @@ pub fn prove<N: Network>(
     // execute prover in MPC
     let start = Instant::now();
     let (proof, public_inputs) =
-        Rep3CoUltraHonk::<_, Transcript, UltraFlavour>::prove(net0, proving_key, prover_crs, ZK)?;
+        Rep3CoUltraHonk::<_, Transcript>::prove(net0, proving_key, prover_crs, ZK)?;
     let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
     tracing::info!("Generate proof took {duration_ms} ms");
     Ok((proof, public_inputs))
@@ -136,8 +132,8 @@ pub fn prove<N: Network>(
 pub fn verify(
     proof: HonkProof<F>,
     public_inputs: &[F],
-    verifying_key: &VerifyingKey<Pairing, UltraFlavour>,
+    verifying_key: &VerifyingKey<Pairing>,
 ) -> eyre::Result<bool> {
-    UltraHonk::<_, Transcript, UltraFlavour>::verify(proof, public_inputs, verifying_key, ZK)
+    UltraHonk::<_, Transcript>::verify(proof, public_inputs, verifying_key, ZK)
         .context("while verifying proof")
 }
