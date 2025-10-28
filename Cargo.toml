@@ -19,17 +19,17 @@ ark-ff = "^0.5.0"
 ark-groth16 = "0.5.0"
 ark-poly = "^0.5.0"
 ark-relations = "^0.5.0"
-co-acvm = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-builder = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-circom = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-groth16 = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-noir = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-noir-common = { version = "0.1.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-co-noir-types = { version = "0.1.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
+co-acvm = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-builder = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-circom = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-groth16 = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-noir = { version = "0.6.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-noir-common = { version = "0.1.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+co-noir-types = { version = "0.1.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
 eyre = "0.6.12"
 itertools = "0.14.0"
-mpc-core = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c" }
-mpc-net = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "e636308efdf115149d53e05e70b157cfe5babb6c", features = [
+mpc-core = { version = "0.9.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969" }
+mpc-net = { version = "0.4.0", git = "https://github.com/TaceoLabs/co-snarks", rev = "3360969", features = [
     "local",
 ] }
 noirc-artifacts = { version = "1.0.0-beta.6", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.6", package = "noirc_artifacts" }
