@@ -17,6 +17,7 @@ use {
 
 /// Represents a R1CS constraint system.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct R1CS<F: PrimeField> {
     pub num_public_inputs: usize,
     pub interner: Interner<F>,
