@@ -42,6 +42,7 @@ pub struct ProductLinearTerm<F: PrimeField>(
 );
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(bound = "")]
 /// Indicates how to solve for a collection of R1CS witnesses in terms of
 /// earlier (i.e. already solved for) R1CS witnesses and/or ACIR witness values.
 pub enum WitnessBuilder<F: PrimeField> {

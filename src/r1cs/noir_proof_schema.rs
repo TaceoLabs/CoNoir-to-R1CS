@@ -14,6 +14,7 @@ use {
 
 /// A scheme for proving a Noir program.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct NoirProofScheme<F: PrimeField> {
     pub program: ProgramArtifact,
     pub r1cs: R1CS<F>,
