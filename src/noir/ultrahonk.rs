@@ -1,8 +1,8 @@
 use acir::native_types::WitnessStack;
 use co_acvm::{Rep3AcvmType, solver::Rep3CoSolver};
 use co_noir::{
-    AcirFormat, Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, UltraHonk, VerifyingKey,
-    VerifyingKeyBarretenberg,
+    AcirFormat, Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, TranscriptHasher, UltraHonk,
+    VerifyingKey, VerifyingKeyBarretenberg,
 };
 use co_noir_common::{
     crs::{ProverCrs, parse::CrsParser},
@@ -19,6 +19,7 @@ type Curve = ark_bn254::G1Projective;
 pub(crate) type Pairing = Bn254;
 type CrsG2 = ark_bn254::G2Affine;
 type Transcript = Keccak256;
+type DataType = <Transcript as TranscriptHasher<F>>::DataType;
 
 const ZK: ZeroKnowledge = ZeroKnowledge::Yes;
 const RECURSIVE: bool = false;
@@ -110,9 +111,10 @@ pub fn prove<N: Network>(
     constraint_system: &AcirFormat<F>,
     witness: Vec<Rep3Type<F>>,
     prover_crs: &ProverCrs<Curve>,
+    verifying_key: &VerifyingKeyBarretenberg<Curve>,
     net0: &N,
     net1: &N,
-) -> eyre::Result<(HonkProof<F>, Vec<F>)> {
+) -> eyre::Result<(HonkProof<DataType>, Vec<DataType>)> {
     tracing::info!("Starting proving key generation...");
     let start = Instant::now();
     let proving_key =
@@ -123,15 +125,15 @@ pub fn prove<N: Network>(
     // execute prover in MPC
     let start = Instant::now();
     let (proof, public_inputs) =
-        Rep3CoUltraHonk::<_, Transcript>::prove(net0, proving_key, prover_crs, ZK)?;
+        Rep3CoUltraHonk::<_, Transcript>::prove(net0, proving_key, prover_crs, ZK, verifying_key)?;
     let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
     tracing::info!("Generate proof took {duration_ms} ms");
     Ok((proof, public_inputs))
 }
 
 pub fn verify(
-    proof: HonkProof<F>,
-    public_inputs: &[F],
+    proof: HonkProof<DataType>,
+    public_inputs: &[DataType],
     verifying_key: &VerifyingKey<Pairing>,
 ) -> eyre::Result<bool> {
     UltraHonk::<_, Transcript>::verify(proof, public_inputs, verifying_key, ZK)
