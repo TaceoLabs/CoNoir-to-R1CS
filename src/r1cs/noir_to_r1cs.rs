@@ -12,9 +12,7 @@ use {
     acir::{
         circuit::{
             Circuit, Opcode,
-            opcodes::{
-                BlackBoxFuncCall, BlockType, ConstantOrWitnessEnum as ConstantOrACIRWitness,
-            },
+            opcodes::{BlackBoxFuncCall, BlockType, FunctionInput as ConstantOrACIRWitness},
         },
         native_types::{Expression, Witness as NoirWitness},
     },
@@ -293,15 +291,7 @@ impl<F: PrimeField> NoirToR1CSCompiler<F> {
                     memory_blocks.insert(block_id, block);
                 }
 
-                Opcode::MemoryOp {
-                    block_id,
-                    op,
-                    predicate,
-                } => {
-                    // Panic if the predicate is set (according to Noir developers, predicate is
-                    // always None and will soon be removed).
-                    assert!(predicate.is_none());
-
+                Opcode::MemoryOp { block_id, op } => {
                     let block_id = block_id.0 as usize;
                     assert!(
                         memory_blocks.contains_key(&block_id),
@@ -345,11 +335,7 @@ impl<F: PrimeField> NoirToR1CSCompiler<F> {
                 }
 
                 Opcode::BlackBoxFuncCall(black_box_func_call) => match black_box_func_call {
-                    BlackBoxFuncCall::RANGE {
-                        input: function_input,
-                    } => {
-                        let input = function_input.input();
-                        let num_bits = function_input.num_bits();
+                    BlackBoxFuncCall::RANGE { input, num_bits } => {
                         let input_witness = match input {
                             ConstantOrACIRWitness::Constant(_) => {
                                 panic!(
@@ -358,13 +344,13 @@ impl<F: PrimeField> NoirToR1CSCompiler<F> {
                                 );
                             }
                             ConstantOrACIRWitness::Witness(witness) => {
-                                self.fetch_r1cs_witness_index(witness)
+                                self.fetch_r1cs_witness_index(*witness)
                             }
                         };
                         // println!("RANGE CHECK of witness {input_witness} to {num_bits} bits");
                         // Add the entry into the range blocks.
                         range_checks
-                            .entry(num_bits)
+                            .entry(*num_bits)
                             .or_default()
                             .push(input_witness);
                     }
@@ -373,17 +359,27 @@ impl<F: PrimeField> NoirToR1CSCompiler<F> {
                     // The inputs and outputs will have already been solved for by the ACIR solver.
                     // Collect the R1CS witnesses indices so that we can later constrain them
                     // appropriately.
-                    BlackBoxFuncCall::AND { lhs, rhs, output } => {
+                    BlackBoxFuncCall::AND {
+                        lhs,
+                        rhs,
+                        num_bits: _,
+                        output,
+                    } => {
                         and_ops.push((
-                            self.fetch_constant_or_r1cs_witness(lhs.input()),
-                            self.fetch_constant_or_r1cs_witness(rhs.input()),
+                            self.fetch_constant_or_r1cs_witness(*lhs),
+                            self.fetch_constant_or_r1cs_witness(*rhs),
                             self.fetch_r1cs_witness_index(*output),
                         ));
                     }
-                    BlackBoxFuncCall::XOR { lhs, rhs, output } => {
+                    BlackBoxFuncCall::XOR {
+                        lhs,
+                        rhs,
+                        num_bits: _,
+                        output,
+                    } => {
                         xor_ops.push((
-                            self.fetch_constant_or_r1cs_witness(lhs.input()),
-                            self.fetch_constant_or_r1cs_witness(rhs.input()),
+                            self.fetch_constant_or_r1cs_witness(*lhs),
+                            self.fetch_constant_or_r1cs_witness(*rhs),
                             self.fetch_r1cs_witness_index(*output),
                         ));
                     }
