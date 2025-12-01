@@ -3,8 +3,8 @@ use ark_ff::Zero;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::SynthesisError;
 use co_circom::{
-    CircomArkworksPairingBridge, CircomArkworksPrimeFieldBridge, CoCircomCompiler,
-    CoCircomCompilerParsed, CompilerConfig, ConstraintMatrices, ProvingKey, SimplificationLevel,
+    CircomArkworksPairingBridge, CoCircomCompiler, CoCircomCompilerParsed, CompilerConfig,
+    ConstraintMatrices, ProvingKey, SimplificationLevel,
 };
 use co_noir::Pairing;
 use eyre::Context;
@@ -21,8 +21,6 @@ pub struct CircomProofSchema<P: Pairing> {
 impl<P: Pairing> CircomProofSchema<P>
 where
     P: CircomArkworksPairingBridge,
-    P::BaseField: CircomArkworksPrimeFieldBridge,
-    P::ScalarField: CircomArkworksPrimeFieldBridge,
 {
     fn get_compiler_config(link_lib: PathBuf) -> CompilerConfig {
         CompilerConfig {

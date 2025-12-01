@@ -1,11 +1,10 @@
 use acir::native_types::WitnessStack;
 use co_acvm::{Rep3AcvmType, solver::Rep3CoSolver};
-use co_noir::{
-    AcirFormat, Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, TranscriptHasher, UltraHonk,
-    VerifyingKey, VerifyingKeyBarretenberg,
-};
+use co_builder::prelude::AcirFormat;
+use co_noir::{Bn254, HonkProof, Keccak256, Rep3CoUltraHonk, TranscriptHasher, UltraHonk};
 use co_noir_common::{
     crs::{ProverCrs, parse::CrsParser},
+    keys::verification_key::{VerifyingKey, VerifyingKeyBarretenberg},
     types::ZeroKnowledge,
 };
 use co_noir_types::Rep3Type;
@@ -22,22 +21,20 @@ type Transcript = Keccak256;
 type DataType = <Transcript as TranscriptHasher<F>>::DataType;
 
 const ZK: ZeroKnowledge = ZeroKnowledge::Yes;
-const RECURSIVE: bool = false;
-const HONK_RECURSION: bool = true;
 
 pub fn get_program_artifact(circuit_path: impl AsRef<Path>) -> eyre::Result<ProgramArtifact> {
-    let file = File::open(circuit_path).context("while opening program artifact file")?;
+    let file = File::open(circuit_path).context("while opening program ^artifact file")?;
     let artifact =
         co_noir::program_artifact_from_reader(file).context("while parsing program artifact")?;
     Ok(artifact)
 }
 
 pub fn get_constraint_system_from_artifact(program_artifact: &ProgramArtifact) -> AcirFormat<F> {
-    co_noir::get_constraint_system_from_artifact(program_artifact, HONK_RECURSION)
+    co_noir::get_constraint_system_from_artifact(program_artifact)
 }
 
 pub fn get_circuit_size(constraint_system: &AcirFormat<F>) -> eyre::Result<usize> {
-    co_noir::compute_circuit_size::<Curve>(constraint_system, RECURSIVE)
+    co_noir::compute_circuit_size::<Curve>(constraint_system)
 }
 
 pub fn get_prover_crs(
@@ -55,7 +52,7 @@ pub fn generate_vk_barretenberg(
     constraint_system: &AcirFormat<F>,
     prover_crs: Arc<ProverCrs<Curve>>,
 ) -> eyre::Result<VerifyingKeyBarretenberg<Curve>> {
-    co_noir::generate_vk_barretenberg::<Curve>(constraint_system, prover_crs, RECURSIVE)
+    co_noir::generate_vk_barretenberg::<Curve>(constraint_system, prover_crs)
 }
 
 pub fn get_vk(vk: VerifyingKeyBarretenberg<Curve>, verifier_crs: CrsG2) -> VerifyingKey<Pairing> {
@@ -118,7 +115,7 @@ pub fn prove<N: Network>(
     tracing::info!("Starting proving key generation...");
     let start = Instant::now();
     let proving_key =
-        co_noir::generate_proving_key_rep3(constraint_system, witness, RECURSIVE, net0, net1)?;
+        co_noir::generate_proving_key_rep3(constraint_system, witness, net0, net1, prover_crs)?;
     let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
     tracing::info!("Build proving key took {duration_ms} ms");
 
