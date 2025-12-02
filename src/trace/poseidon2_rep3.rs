@@ -322,4 +322,79 @@ impl<F: PrimeField> MpcTraceHasher<F> for Poseidon2<F, 2, 5> {
 
         Ok((left, traces))
     }
+
+    fn hash_rep3_generate_noir_trace_vec<N: Network>(
+        &self,
+        data: Vec<Rep3PrimeFieldShare<F>>,
+        precomp: &mut Self::Precomputation,
+        net: &N,
+    ) -> eyre::Result<(Vec<Rep3PrimeFieldShare<F>>, Vec<Vec<Rep3AcvmType<F>>>)> {
+        const T: usize = 2;
+        let l2 = data.len();
+        assert_eq!(l2 % T, 0);
+        let l = l2 / T;
+        let witness_size = 3 * self.num_sbox() + self.num_rounds();
+        let mut traces = (0..l)
+            .map(|_| Vec::with_capacity(witness_size))
+            .collect::<Vec<_>>();
+        let mut state = data;
+        let mut left = (0..l).map(|i| state[i * T]).collect::<Vec<_>>();
+
+        let offset = precomp.get_offset();
+        let id = PartyID::try_from(net.id())?;
+
+        // Linear layer at beginning
+        for s in state.chunks_exact_mut(T) {
+            Self::matmul_external_rep3(s.try_into().unwrap());
+        }
+
+        // First set of external rounds
+        for r in 0..self.params.rounds_f_beginning {
+            add_rc_external_packed(self, &mut state, r, id);
+            sbox_rep3_precomp_with_noir_trace(&mut state, precomp, &mut traces, net)?;
+            for (s, trace) in state.chunks_exact_mut(T).zip(traces.iter_mut()) {
+                trace.push(s[0].into());
+                Self::matmul_external_rep3(s.try_into().unwrap());
+            }
+        }
+
+        // Internal rounds
+        for r in 0..self.params.rounds_p {
+            add_rc_internal_packed(self, &mut state, r, id);
+            single_sbox_rep3_precomp_packed_with_noir_trace::<_, T, _>(
+                &mut state,
+                precomp,
+                &mut traces,
+                net,
+            )?;
+            for (s, trace) in state.chunks_exact_mut(T).zip(traces.iter_mut()) {
+                trace.push(s[1].into());
+                self.matmul_internal_rep3(s.try_into().unwrap());
+            }
+        }
+
+        // Remaining external rounds
+        for r in self.params.rounds_f_beginning
+            ..self.params.rounds_f_beginning + self.params.rounds_f_end
+        {
+            add_rc_external_packed(self, &mut state, r, id);
+            sbox_rep3_precomp_with_noir_trace(&mut state, precomp, &mut traces, net)?;
+            for (s, trace) in state.chunks_exact_mut(T).zip(traces.iter_mut()) {
+                trace.push(s[0].into());
+                Self::matmul_external_rep3(s.try_into().unwrap());
+            }
+        }
+
+        for trace in traces.iter() {
+            debug_assert_eq!(trace.len(), witness_size);
+        }
+        debug_assert_eq!(precomp.get_offset() - offset, self.num_sbox() * l);
+
+        // Feed forward
+        for (src, des) in state.iter().step_by(T).zip(left.iter_mut()) {
+            *des += src;
+        }
+
+        Ok((left, traces))
+    }
 }

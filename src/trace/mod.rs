@@ -45,4 +45,13 @@ pub trait MpcTraceHasher<F: PrimeField>: TraceHasher<F> {
         precomp: &mut Self::Precomputation,
         net: &N,
     ) -> eyre::Result<([Rep3PrimeFieldShare<F>; L], [Vec<Rep3AcvmType<F>>; L])>;
+
+    // Same as hash_rep3_generate_noir_trace_many but works on vectors instead of arrays
+    #[expect(clippy::type_complexity)]
+    fn hash_rep3_generate_noir_trace_vec<N: Network>(
+        &self,
+        data: Vec<Rep3PrimeFieldShare<F>>,
+        precomp: &mut Self::Precomputation,
+        net: &N,
+    ) -> eyre::Result<(Vec<Rep3PrimeFieldShare<F>>, Vec<Vec<Rep3AcvmType<F>>>)>;
 }
