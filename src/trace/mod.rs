@@ -30,6 +30,13 @@ pub trait MpcTraceHasher<F: PrimeField>: TraceHasher<F> {
         net: &N,
     ) -> eyre::Result<Rep3PrimeFieldShare<F>>;
 
+    fn hash_rep3_many<N: Network, const L: usize, const L2: usize>(
+        &self,
+        data: [Rep3PrimeFieldShare<F>; L2],
+        precomp: &mut Self::Precomputation,
+        net: &N,
+    ) -> eyre::Result<[Rep3PrimeFieldShare<F>; L]>;
+
     fn hash_rep3_generate_noir_trace<N: Network>(
         &self,
         data: [Rep3PrimeFieldShare<F>; 2],
