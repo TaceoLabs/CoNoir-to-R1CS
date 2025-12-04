@@ -196,6 +196,24 @@ impl<F: PrimeField> MpcTraceHasher<F> for Poseidon2<F, 2, 5> {
         Ok(data[0] + left)
     }
 
+    fn hash_rep3_many<N: Network, const L: usize, const L2: usize>(
+        &self,
+        mut data: [Rep3PrimeFieldShare<F>; L2],
+        precomp: &mut Self::Precomputation,
+        net: &N,
+    ) -> eyre::Result<[Rep3PrimeFieldShare<F>; L]> {
+        const T: usize = 2;
+        assert_eq!(L2, T * L);
+        let mut left: [_; L] = array::from_fn(|i| data[i * T]);
+        self.rep3_permutation_in_place_with_precomputation_packed(&mut data, precomp, net)?;
+
+        // Feed forward
+        for (src, des) in data.iter().step_by(T).zip(left.iter_mut()) {
+            *des += src;
+        }
+        Ok(left)
+    }
+
     fn hash_rep3_generate_noir_trace<N: Network>(
         &self,
         data: [Rep3PrimeFieldShare<F>; 2],
