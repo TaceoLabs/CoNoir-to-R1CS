@@ -104,24 +104,45 @@ where
         }
     }
 
-    pub fn from_r1cs<R: Rng + CryptoRng>(
+    pub fn from_r1cs_libsnark<R: Rng + CryptoRng>(
         r1cs: R1CSFile<P::ScalarField>,
         rng: &mut R,
     ) -> eyre::Result<Self> {
         let matrices = Self::rc1s_to_constraint_matrix(r1cs);
-        let pk = Self::generate_proving_key(rng, &matrices)?;
+        let pk = Self::generate_proving_key_libsnark(rng, &matrices)?;
         Ok(Self { pk, matrices })
     }
 
-    pub fn from_r1cs_file<R: Rng + CryptoRng>(path: PathBuf, rng: &mut R) -> eyre::Result<Self> {
+    pub fn from_r1cs_file_libsnark<R: Rng + CryptoRng>(
+        path: PathBuf,
+        rng: &mut R,
+    ) -> eyre::Result<Self> {
         let file = File::open(path)?;
         let r1cs = R1CSFile::<P::ScalarField>::new(file).context("while reading r1cs file")?;
-        Self::from_r1cs(r1cs, rng)
+        Self::from_r1cs_libsnark(r1cs, rng)
+    }
+
+    pub fn from_r1cs_circom<R: Rng + CryptoRng>(
+        r1cs: R1CSFile<P::ScalarField>,
+        rng: &mut R,
+    ) -> eyre::Result<Self> {
+        let matrices = Self::rc1s_to_constraint_matrix(r1cs);
+        let pk = Self::generate_proving_key_circom(rng, &matrices)?;
+        Ok(Self { pk, matrices })
+    }
+
+    pub fn from_r1cs_file_circom<R: Rng + CryptoRng>(
+        path: PathBuf,
+        rng: &mut R,
+    ) -> eyre::Result<Self> {
+        let file = File::open(path)?;
+        let r1cs = R1CSFile::<P::ScalarField>::new(file).context("while reading r1cs file")?;
+        Self::from_r1cs_circom(r1cs, rng)
     }
 
     // This is extracted from ark-groth (generate_random_parameters_with_reduction)
     // TODO make a ceremnoy out of this
-    pub fn generate_proving_key<R: Rng + CryptoRng>(
+    pub fn generate_proving_key_libsnark<R: Rng + CryptoRng>(
         rng: &mut R,
         matrices: &ConstraintMatrices<P::ScalarField>,
     ) -> eyre::Result<ProvingKey<P>> {
@@ -133,7 +154,29 @@ where
         let t = domain.sample_element_outside_domain(rng);
 
         let qap = Self::qap_reduction::<D<P::ScalarField>>(t, matrices)?;
-        crate::circom::proving_key::generate_proving_key(
+        crate::circom::proving_key::generate_proving_key_libsnark(
+            rng,
+            t,
+            matrices.num_instance_variables,
+            qap,
+        )
+    }
+
+    // This is extracted from ark-groth (generate_random_parameters_with_reduction)
+    // TODO make a ceremnoy out of this
+    pub fn generate_proving_key_circom<R: Rng + CryptoRng>(
+        rng: &mut R,
+        matrices: &ConstraintMatrices<P::ScalarField>,
+    ) -> eyre::Result<ProvingKey<P>> {
+        type D<F> = GeneralEvaluationDomain<F>;
+
+        let domain_size = matrices.num_constraints + matrices.num_instance_variables;
+        let domain = D::<P::ScalarField>::new(domain_size)
+            .ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
+        let t = domain.sample_element_outside_domain(rng);
+
+        let qap = Self::qap_reduction::<D<P::ScalarField>>(t, matrices)?;
+        crate::circom::proving_key::generate_proving_key_circom(
             rng,
             t,
             matrices.num_instance_variables,

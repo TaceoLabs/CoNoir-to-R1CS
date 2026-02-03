@@ -1,5 +1,6 @@
 use ark_ec::{CurveGroup, scalar_mul::BatchMulPreprocessing};
 use ark_ff::{Field, PrimeField, UniformRand, Zero};
+use ark_poly::GeneralEvaluationDomain;
 use ark_relations::r1cs::SynthesisError;
 use co_circom::ProvingKey;
 use co_groth16::VerifyingKey;
@@ -17,7 +18,7 @@ pub struct QapReduction<F: PrimeField> {
 
 // This is extracted from ark-groth (generate_random_parameters_with_reduction)
 // TODO make a ceremnoy out of this
-pub fn generate_proving_key<P: Pairing, R: Rng + CryptoRng>(
+pub fn generate_proving_key_libsnark<P: Pairing, R: Rng + CryptoRng>(
     rng: &mut R,
     t: P::ScalarField,
     num_public_inputs: usize,
@@ -31,6 +32,9 @@ pub fn generate_proving_key<P: Pairing, R: Rng + CryptoRng>(
     let g1_generator = P::G1::rand(rng);
     let g2_generator = P::G2::rand(rng);
 
+    let delta_inverse = delta.inverse().ok_or(SynthesisError::UnexpectedIdentity)?;
+    let h_scalars = super::h_query_scalars_libsnark(qap.m_raw - 1, t, qap.zt, delta_inverse)?;
+
     generate_proving_key_with_randomness(
         alpha,
         beta,
@@ -38,9 +42,48 @@ pub fn generate_proving_key<P: Pairing, R: Rng + CryptoRng>(
         delta,
         g1_generator,
         g2_generator,
-        t,
         num_public_inputs,
         qap,
+        h_scalars,
+    )
+}
+
+// This is extracted from ark-groth (generate_random_parameters_with_reduction)
+// TODO make a ceremnoy out of this
+pub fn generate_proving_key_circom<P: Pairing, R: Rng + CryptoRng>(
+    rng: &mut R,
+    t: P::ScalarField,
+    num_public_inputs: usize,
+    qap: QapReduction<P::ScalarField>,
+) -> eyre::Result<ProvingKey<P>> {
+    type D<F> = GeneralEvaluationDomain<F>;
+
+    let alpha = P::ScalarField::rand(rng);
+    let beta = P::ScalarField::rand(rng);
+    let gamma = P::ScalarField::rand(rng);
+    let delta = P::ScalarField::rand(rng);
+
+    let g1_generator = P::G1::rand(rng);
+    let g2_generator = P::G2::rand(rng);
+
+    let delta_inverse = delta.inverse().ok_or(SynthesisError::UnexpectedIdentity)?;
+    let h_scalars = super::h_query_scalars_circom::<P::ScalarField, D<P::ScalarField>>(
+        qap.m_raw - 1,
+        t,
+        qap.zt,
+        delta_inverse,
+    )?;
+
+    generate_proving_key_with_randomness(
+        alpha,
+        beta,
+        gamma,
+        delta,
+        g1_generator,
+        g2_generator,
+        num_public_inputs,
+        qap,
+        h_scalars,
     )
 }
 
@@ -53,9 +96,9 @@ pub fn generate_proving_key_with_randomness<P: Pairing>(
     delta: P::ScalarField,
     g1_generator: P::G1,
     g2_generator: P::G2,
-    t: P::ScalarField,
     num_public_inputs: usize,
     qap: QapReduction<P::ScalarField>,
+    h_scalars: Vec<P::ScalarField>,
 ) -> eyre::Result<ProvingKey<P>> {
     // Following is the mapping of symbols from the Groth16 paper to this implementation
     // l -> num_instance_variables
@@ -123,7 +166,7 @@ pub fn generate_proving_key_with_randomness<P: Pairing>(
     drop(qap.b);
 
     // Compute the H-query
-    let h_scalars = super::h_query_scalars(qap.m_raw - 1, t, qap.zt, delta_inverse)?;
+    // let h_scalars = super::h_query_scalars(qap.m_raw - 1, t, qap.zt, delta_inverse)?; // Is an input now
     let h_query = g1_table.batch_mul(&h_scalars);
 
     // Compute the L-query

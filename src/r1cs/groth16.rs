@@ -20,7 +20,12 @@ impl<F: PrimeField> R1CS<F> {
         let t = domain.sample_element_outside_domain(rng);
 
         let qap = self.qap_reduction::<D<F>>(t)?;
-        crate::circom::proving_key::generate_proving_key(rng, t, self.num_public_inputs, qap)
+        crate::circom::proving_key::generate_proving_key_libsnark(
+            rng,
+            t,
+            self.num_public_inputs,
+            qap,
+        )
     }
 
     // Copied from ark-groth16 (instance_map_with_evaluation)
