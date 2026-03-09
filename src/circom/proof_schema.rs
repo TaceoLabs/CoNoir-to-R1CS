@@ -4,7 +4,7 @@ use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_relations::r1cs::SynthesisError;
 use co_circom::{
     CircomArkworksPairingBridge, CoCircomCompiler, CoCircomCompilerParsed, CompilerConfig,
-    ConstraintMatrices, ProvingKey, SimplificationLevel,
+    ConstraintMatrices, ProvingKey,
 };
 use co_noir::Pairing;
 use eyre::Context;
@@ -23,14 +23,9 @@ where
     P: CircomArkworksPairingBridge,
 {
     fn get_compiler_config(link_lib: PathBuf) -> CompilerConfig {
-        CompilerConfig {
-            version: "2.2.2".to_string(),
-            link_library: vec![link_lib],
-            allow_leaky_loops: false,
-            simplification: SimplificationLevel::O2(usize::MAX),
-            verbose: false,
-            inspect: false,
-        }
+        let mut compiler = CompilerConfig::release();
+        compiler.link_library = vec![link_lib];
+        compiler
     }
 
     #[must_use]
