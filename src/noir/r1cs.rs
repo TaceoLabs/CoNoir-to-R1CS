@@ -7,7 +7,6 @@ use ark_groth16::{Proof, ProvingKey, VerifyingKey};
 use ark_relations::r1cs::ConstraintMatrices;
 use co_acvm::{Rep3AcvmSolver, Rep3AcvmType};
 use co_circom::Rep3SharedWitness;
-use co_groth16::{LibSnarkReduction, Rep3CoGroth16};
 use co_noir_types::Rep3Type;
 use eyre::Context;
 use mpc_core::protocols::rep3::{
@@ -187,6 +186,7 @@ pub fn setup_r1cs<R: Rng + CryptoRng>(
     Ok((proof_schema, pk, cs))
 }
 
+#[cfg(not(feature = "gpu"))]
 pub fn prove<N: Network>(
     constraint_system: &ConstraintMatrices<F>,
     proving_key: &ProvingKey<Pairing>,
@@ -197,10 +197,47 @@ pub fn prove<N: Network>(
     let public_input = witness.public_inputs[1..].to_vec(); // Skip the constant 1
 
     let start = Instant::now();
-    let proof = Rep3CoGroth16::prove::<N, LibSnarkReduction>(
+    let proof = co_groth16::Rep3CoGroth16::prove::<N, co_groth16::LibSnarkReduction>(
         net0,
         net1,
         proving_key,
+        constraint_system,
+        witness,
+    )?;
+
+    let duration_ms = start.elapsed().as_micros() as f64 / 1000.;
+    tracing::info!("Generate proof took {duration_ms} ms");
+
+    Ok((proof, public_input))
+}
+
+#[cfg(feature = "gpu")]
+pub fn prove<N: Network>(
+    constraint_system: &ConstraintMatrices<F>,
+    proving_key: &ProvingKey<Pairing>,
+    witness: Rep3SharedWitness<F>,
+    net0: &N,
+    net1: &N,
+) -> eyre::Result<(Proof<Pairing>, Vec<F>)> {
+    use std::sync::Arc;
+
+    use co_groth16_gpu::prepare_bn254_key;
+
+    let public_input = witness.public_inputs[1..].to_vec(); // Skip the constant 1
+
+    // TODO: Do not precompute the key here
+    let prepared_key = prepare_bn254_key::<co_groth16_gpu::LibSnarkReduction>(
+        proving_key,
+        constraint_system.num_constraints,
+        constraint_system.num_instance_variables,
+    );
+
+    let start = Instant::now();
+    let proof = co_groth16_gpu::Rep3CoGroth16::prove::<N, co_groth16_gpu::LibSnarkReduction>(
+        net0,
+        net1,
+        proving_key,
+        Some(Arc::new(prepared_key)),
         constraint_system,
         witness,
     )?;
