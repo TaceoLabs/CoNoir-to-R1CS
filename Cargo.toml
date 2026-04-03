@@ -14,7 +14,7 @@ readme = "./README.md"
 acir = { package = "acir", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.17", version = "1.0.0-beta.17" }
 ark-bn254 = "^0.5.0"
 ark-circom = { git = "https://github.com/TaceoLabs/circom-compat.git", rev = "7f178fd", version = "^0.5.0", default-features = false, features = [
-  "r1cs_file",
+    "r1cs_file",
 ] }
 ark-ec = { version = "^0.5.0", default-features = false }
 ark-ff = "^0.5.0"
@@ -24,18 +24,18 @@ ark-relations = "^0.5.0"
 ark-serialize = "^0.5.0"
 circom-types = { package = "taceo-circom-types", version = "0.2", default-features = false }
 clap = { version = "4", features = ["derive", "env"] }
-co-acvm = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.7.0" }
-co-builder = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.5.0" }
-co-circom = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.10.0" }
-co-groth16 = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.10.0" }
-co-noir = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.7.0" }
-co-noir-common = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.2.0" }
-co-noir-types = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.1.1" }
+co-acvm = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.7.0" }
+co-builder = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.5.0" }
+co-circom = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.10.0" }
+co-groth16 = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.10.0" }
+co-noir = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.7.0" }
+co-noir-common = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.2.0" }
+co-noir-types = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.1.1" }
 eyre = "0.6.12"
 itertools = "0.14.0"
-mpc-core = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.10.0" }
-mpc-net = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5d91afa", version = "0.5.0", features = [
-  "local",
+mpc-core = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.10.0" }
+mpc-net = { git = "https://github.com/TaceoLabs/co-snarks", rev = "5454c3e", version = "0.5.0", features = [
+    "local",
 ] }
 noirc-artifacts = { package = "noirc_artifacts", git = "https://github.com/noir-lang/noir/", tag = "v1.0.0-beta.17", version = "1.0.0-beta.17" }
 num-bigint = { version = "0.4.6" }
